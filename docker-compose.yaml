@@ -1,15 +1,13 @@
 services:
   mc-server:
-    image: itzg/minecraft-server
-    tty: true
-    stdin_open: true
+    build: .
     ports:
       - "8888:25565"
-    environment:
-      EULA: "TRUE"
-    volumes:
-      - ./data:/data
+    env_file:
+      - .env
     restart: unless-stopped
+    volumes:
+      - data:/mc-server
 
 volumes:
   data:

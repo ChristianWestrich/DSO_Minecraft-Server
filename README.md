@@ -1,175 +1,111 @@
 # 🎮 Minecraft Java Server — Docker Setup
 
+This repository provides a containerized setup for a **Minecraft Java Edition** server. It uses a custom `Dockerfile` to build a minimal environment to run your `server.jar`.
+
 ## Table of Contents
 
 - [Description](#description)
+- [Project Contents](#project-contents)
 - [Quickstart](#quickstart)
-- [Usage](#usage)
+- [Usage & Configuration](#usage--configuration)
   - [Prerequisites](#prerequisites)
-  - [Configuration](#configuration)
-  - [Starting & Stopping](#starting--stopping)
+  - [Environment Variables](#environment-variables)
+  - [Modifying Configuration](#modifying-configuration)
   - [Data Persistence](#data-persistence)
-  - [Checking Server Status](#checking-server-status)
+- [Commands](#commands)
 
 ---
 
 ## Description
 
-This repository contains a Docker-based setup for a **Minecraft Java Edition multiplayer server**. The goal is to provide a fully configurable and persistent Minecraft server with minimal effort — locally or on a cloud VM.
+The purpose of this repository is to offer a simple, **Docker-based deployment** for a Minecraft Java server. Instead of manually installing Java and managing dependencies, you can launch a fully functional server with a single command. 
 
-Key contents:
+**Key Features:**
+- **Customized Container**: Uses `eclipse-temurin:25-jre` for a modern, lightweight Java environment.
+- **Environment Driven**: Configure server memory and settings via a `.env` file.
+- **Persistence**: Game data and configurations are stored in a Docker volume, ensuring your world remains intact between restarts.
 
-- `docker-compose.yml` — Defines the Minecraft service based on the official [`itzg/minecraft-server`](https://github.com/itzg/docker-minecraft-server) image
-- Automatic download of the server JAR on first start
-- Persistent world data via volume mount (`./data`)
-- Automatic restart on failure (`restart: unless-stopped`)
+---
+
+## Project Contents
+
+- `Dockerfile`: Defines the server's runtime environment.
+- `docker-compose.yaml`: Orchestrates the server container and volumes.
+- `minecraft-server-entrypoint.sh`: A script that handles EULA acceptance and starts the server with specified memory flags.
+- `server.jar`: The Minecraft server executable (ensure this is present in the root).
+- `.env.template`: A template for your environment configuration.
+- `server.properties`: The main configuration file for Minecraft server settings.
 
 ---
 
 ## Quickstart
 
-**Prerequisites:**
+### 1. Prerequisites
+- [Docker](https://www.docker.com/) and Docker Compose installed.
+- A `server.jar` file in the project root directory.
 
-- [Docker](https://www.docker.com/) & Docker Compose installed
-- Port `8888` open on the host
+### 2. Setup Environment
+Copy the template to create your `.env` file:
+```bash
+cp .env.template .env
+```
 
-**Start the server:**
-
+### 3. Launch the Server
+Start the container in detached mode:
 ```bash
 docker compose up -d
 ```
 
-**Check status:**
-
+### 4. Check Logs
+Monitor the server startup:
 ```bash
-docker compose logs -f mc-server
+docker compose logs -f
 ```
-
-Once `Done! For help, type "help"` appears, the server is reachable at:
-
-```
-localhost:8888
-```
+The server is ready once you see `Starting Server...` followed by the Minecraft console output. By default, it's accessible via `localhost:8888`.
 
 ---
 
-## Usage
+## Usage & Configuration
 
 ### Prerequisites
+| Tool | Recommended Version |
+|------|--------------------|
+| Docker | 24.x or higher |
+| Docker Compose | 2.x or higher |
 
-| Tool | Version |
-|------|---------|
-| Docker | ≥ 24.x |
-| Docker Compose | ≥ 2.x |
+### Environment Variables
+The server is primarily configured via the `.env` file. The following variables are supported:
 
-For testing via Python additionally:
+| Variable | Default (Template) | Description |
+|----------|-------------------|-------------|
+| `EULA` | `true` | Set to `true` to accept the Minecraft End User License Agreement. |
+| `MEMORY_MAX` | `4G` | Maximum RAM allocated to the JVM (e.g., `2G`, `4096M`). |
+| `MEMORY_MIN` | `1G` | Initial RAM allocated to the JVM. |
+| `NOGUI` | `true` | Whether to start the server without the graphical user interface (recommended for Docker). |
 
-```bash
-pip install mcstatus
-```
+### Modifying Configuration
+To achieve different results or optimize performance:
 
----
-
-### Configuration
-
-All configuration is done in `docker-compose.yml`:
-
-```yaml
-services:
-  mc-server:
-    image: itzg/minecraft-server
-    tty: true
-    stdin_open: true
+1.  **Adjust RAM**: For larger servers or many plugins/mods, increase `MEMORY_MAX` in `.env`.
+    - *Example*: `MEMORY_MAX=8G`
+2.  **Server Settings**: Modify `server.properties` directly in the project root. Changes take effect after a restart.
+    - *Example*: Change `view-distance` or `difficulty`.
+3.  **Port Mapping**: If port `8888` is occupied, change the host port in `docker-compose.yaml`:
+    ```yaml
     ports:
-      - "8888:25565"
-    environment:
-      EULA: "TRUE"
-    volumes:
-      - ./data:/data
-    restart: unless-stopped
-
-volumes:
-  data:
-```
-
-**Key parameters:**
-
-| Parameter | Description | Example change |
-|-----------|-------------|----------------|
-| `8888:25565` | External port : internal Minecraft port | `25565:25565` for default |
-| `EULA: "TRUE"` | Accepts the Minecraft EULA (required) | Do not change |
-| `./data:/data` | Local folder for world data & config | Any valid path |
-| `restart: unless-stopped` | Restart policy on crash | `always` or `on-failure` |
-
-**Pin a specific Minecraft version:**
-
-By default the latest version is downloaded. To use a specific version:
-
-```yaml
-environment:
-  EULA: "TRUE"
-  VERSION: "1.20.4"
-```
-
-**Change server type** (e.g. Paper for better performance):
-
-```yaml
-environment:
-  EULA: "TRUE"
-  TYPE: "PAPER"
-```
-
-**Adjust RAM:**
-
-```yaml
-environment:
-  EULA: "TRUE"
-  MEMORY: "2G"
-```
-
----
-
-### Starting & Stopping
-
-```bash
-# Start in background
-docker compose up -d
-
-# Follow live logs
-docker compose logs -f mc-server
-
-# Stop
-docker compose down
-
-# Stop + delete volumes (world data will be lost!)
-docker compose down -v
-```
-
----
+      - "25565:25565" # Changes the external port to the Minecraft default
+    ```
 
 ### Data Persistence
-
-The world data, configuration and all server settings are stored in the `./data` folder on the host. This folder is retained even after `docker compose down`.
-
-Manual configuration of `server.properties` is possible — the file is available under `./data/server.properties` after the first start.
+All world data and server settings are stored in the `data` volume defined in `docker-compose.yaml`. This is mapped to `/mc-server` inside the container, where the game files reside.
 
 ---
 
-### Checking Server Status
+## Commands
 
-Using the Python module [`mcstatus`](https://github.com/py-mine/mcstatus):
-
-```python
-from mcstatus import JavaServer
-
-server = JavaServer.lookup("localhost:8888")
-status = server.status()
-print(f"Version: {status.version.name}")
-print(f"Players online: {status.players.online}/{status.players.max}")
-```
-
-On a cloud VM, use the VM's IP address instead of `localhost`:
-
-```python
-server = JavaServer.lookup("123.456.789.0:8888")
-```
+| Action | Command                     |
+|--------|-----------------------------|
+| Start Server | `docker-compose up --build` |
+| Stop Server | `docker-compose down`       |
+| View Logs | `docker-compose logs -f`    |
+| Restart Server | `docker-compose restart`    |
