@@ -53,14 +53,9 @@ cp .env.template .env
 ### 3. Launch the Server
 Start the container in detached mode:
 ```bash
-docker compose up -d
+docker-compose up --build
 ```
 
-### 4. Check Logs
-Monitor the server startup:
-```bash
-docker compose logs -f
-```
 The server is ready once you see `Starting Server...` followed by the Minecraft console output. By default, it's accessible via `localhost:8888`.
 
 ---
